@@ -101,6 +101,25 @@ def stderr(this, message:str, code:int=1) -> None:
     print(message)
     sys.exit(code)
 
+def manifest_get(this, path:Path) -> tuple[Path, str]:
+    path                    = this.path_expand(path)
+    manifestFile:Path       = path / this.core.metaDir / this.meta.fileStatTable
+    atRootDir:int           = 0
+    file:str                = ''
+    # Try and find the manifest file, and don't get trapped!
+    # If we are "getting" a file, the manifest is off the parent
+    while not this.cfs2fs(manifestFile).is_file():
+        file                = path.name
+        path                = path.parent
+        manifestFile        = path / this.core.metaDir / this.meta.fileStatTable
+        if path == Path('/'):
+            atRootDir += 1
+        if atRootDir >= 2:
+            manifestFile    = Path('/')
+            break
+    return manifestFile, file
+
+
 Core.croot_check                    = croot_check
 Core.metaDirRoot_checkAndCreate     = metaDirRoot_checkAndCreate
 Core.init                           = init
@@ -113,3 +132,4 @@ Core.path_expand                    = path_expand
 Core.dir_checkExists                = dir_checkExists
 Core.pwd_prompt                     = pwd_prompt
 Core.stderr                         = stderr
+Core.manifest_get                   = manifest_get

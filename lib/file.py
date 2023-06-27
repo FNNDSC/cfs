@@ -14,11 +14,14 @@ import  datetime
 @constructor # File ---------------------------------------
 def File(this, cfsfile:Path) -> None:
     # Type annotations are not supported on "this"
+    # add the core for some helper functions
+    this.FS:type                = core.Core()
+
+
+    cfsfile                     = this.FS.path_expand(cfsfile)
     this.file:Path              = cfsfile
     this.link:Path              = Path('')
 
-    # add the core for some helper functions
-    this.FS:type                = core.Core()
     this.stats                  = this.FS.cfs2fs(Path(this.file)).stat()
 
     # and the object that will control the manifest
@@ -115,11 +118,16 @@ def manifest_create(this, type:str = 'file') -> dict[str, Any]:
         }
     return d_metaData
 
-def manifest_updateEntry(this) -> dict[str, Any]:
+def manifest_updateEntry(this, d_fileInfo:dict[str, Any] = dict(), name:str="") -> dict[str, Any]:
     # pudb.set_trace()
     df:pd.DataFrame             = pd.read_csv(str(this.manifestRFS))
-    index:pd.Index              = df.index[df['name'] == this.fileObj.name]
-    d_fileInfo: dict[str, Any]  = manifest_create(this)
+    search:str                  = name
+    if not name:
+        search                  = this.fileObj.name
+
+    index:pd.Index              = df.index[df['name'] == search]
+
+    d_fileInfo                  = manifest_create(this)
     if len(index) > 0:
         for key in this.metaFields:
             df.loc[index, key]  = d_fileInfo[key]

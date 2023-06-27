@@ -61,6 +61,7 @@ def file_copy(this, src:Path, dest:Path) -> Path:
     return destReal
 
 def file_process(this, src:Path, dest:Path) -> bool:
+    pudb.set_trace()
     if src.name != dest.name:
          dest  = dest / src.name
     fileObj:type    = file.File(this.fs2cfs(this.file_copy(src, dest)))
@@ -68,7 +69,6 @@ def file_process(this, src:Path, dest:Path) -> bool:
     manifest.update_entry()
 
     return True
-
 
 _imp.error_exit             = badpath_errorExit
 _imp.destination_resolve    = destination_resolve
@@ -91,14 +91,14 @@ which the file is uploaded.
 @click.option('--recursive',
               is_flag = True,
               help    = 'If set, do a recursive copy')
-def imp(sourcefile, targetfile, recursive) -> None:
-    # pudb.set_trace()
+def imp(sourcefile, targetfile, recursive) -> bool:
+    pudb.set_trace()
     imp:_imp        = _imp()
     imp.init()
     src:Path        = Path(sourcefile)
     dest:Path       = imp.destination_resolve(Path(targetfile))
     fileOK:bool     = imp.file_process(src, dest) if src.is_file() else False
-
+    return fileOK
 
     # if recursive:
     #     print(f'Performing a recursive copy...')
