@@ -81,7 +81,7 @@ def manifest_init(this) -> list:
     try:
         l_ret = this.metaFields
         df.loc[len(df)] = manifest_create(this, 'dir')
-        df.to_csv(str(this.manifestRFS), index = False)
+        df.to_csv(str(this.manifestRFS), index = False, )
     except:
         pass
     return l_ret
@@ -127,7 +127,8 @@ def manifest_updateEntry(this, d_fileInfo:dict[str, Any] = dict(), name:str="") 
 
     index:pd.Index              = df.index[df['name'] == search]
 
-    d_fileInfo                  = manifest_create(this)
+    if not d_fileInfo:
+        d_fileInfo              = manifest_create(this)
     if len(index) > 0:
         for key in this.metaFields:
             df.loc[index, key]  = d_fileInfo[key]

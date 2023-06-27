@@ -25,21 +25,38 @@ def source_update(this, src:Path, srcfile:str, destLink:Path, destFile:str):
 
 def file_vcopy(this, source:Path, target:Path):
     pudb.set_trace()
+
+    source              = this.path_expand(source)
+    target              = this.path_expand(target)
     sourcePath:Path     = Path('')
     sourceFile:str      = ""
+    sourcePath, sourceFile  = this.manifest_resolve(Path(source))
+
+    if this.cfs2fs(target.is_dir()):
+        target          = target / Path(sourceFile)
     destPath:Path       = Path('')
     destFile:str        = ""
-
-    sourcePath, sourceFile  = this.manifest_resolve(Path(source))
     destPath, destFile      = this.manifest_resolve(Path(target))
 
     sourceManifest:FILE.Manifest    = FILE.Manifest(FILE.File(source))
     df_source:pd.DataFrame  = LS.files_get(source)
-    df_source['refs']       += f'->{target}'
-    sourceManifest.update_entry(df_source)
-    # destManifest:FILE.Manifest      = FILE.Manifest(FILE.File(target))
+    b_sourceUpdate:bool     = False
+    if df_source['refs'].isnull().values.any():
+        df_source['refs']   = f'->{target}'
+        b_sourceUpdate      = True
+    elif not str(target) in df_source['refs'][1]:
+        df_source['refs']  += f';{target}'
+        b_sourceUpdate      = True
+    if b_sourceUpdate:
+        sourceManifest.update_entry(df_source.to_dict(orient='records')[0])
 
-    df_source:pd.DataFrame  = LS.files_get(source)
+    destManifest:FILE.Manifest      = FILE.Manifest(FILE.File(destPath))
+    df_dest:pd.DataFrame    = LS.files_get(target)
+    if df_dest.empty:
+        df_dest             = df_source.copy()
+        df_dest['refs']     = f'<-{source}'
+    destManifest.update_entry(df_dest.to_dict(orient='records')[0])
+
 
 _cp.manifest_resolve    = manifest_resolve
 _cp.source_update       = source_update
