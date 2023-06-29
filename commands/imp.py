@@ -6,8 +6,10 @@ from    pfmisc      import Colors
 import  shutil, os
 import  pudb
 
-_imp:type        = core.Core
+# Instantiate a "core" object called Imp
+Imp:core.Core = core.Core()
 
+# Define some methods!
 def badpath_errorExit(this, path:str, type:str, fs:str="") -> None:
         message:str =                                                           \
             Colors.LIGHT_RED + f"\n\n\t\t\tDanger, Will Robinson!\n\n" +        \
@@ -70,10 +72,12 @@ def file_process(this, src:Path, dest:Path) -> bool:
 
     return True
 
-_imp.error_exit             = badpath_errorExit
-_imp.destination_resolve    = destination_resolve
-_imp.file_copy              = file_copy
-_imp.file_process           = file_process
+# Attach those methods to our prototype
+Imp.error_exit             = badpath_errorExit
+Imp.destination_resolve    = destination_resolve
+Imp.file_copy              = file_copy
+Imp.file_process           = file_process
+
 
 @click.command(help="""
                                 import files
@@ -92,12 +96,10 @@ which the file is uploaded.
               is_flag = True,
               help    = 'If set, do a recursive copy')
 def imp(sourcefile, targetfile, recursive) -> bool:
-#    pudb.set_trace()
-    imp:_imp        = _imp()
-    imp.init()
+    pudb.set_trace()
     src:Path        = Path(sourcefile)
-    dest:Path       = imp.destination_resolve(Path(targetfile))
-    fileOK:bool     = imp.file_process(src, dest) if src.is_file() else False
+    dest:Path       = Imp.destination_resolve(Path(targetfile))
+    fileOK:bool     = Imp.file_process(src, dest) if src.is_file() else False
     return fileOK
 
     # if recursive:

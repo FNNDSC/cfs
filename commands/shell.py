@@ -36,8 +36,8 @@ def shell(directory:str, prompt, promptreal) -> None:
 
     while True:
         command:str             = input(f'{SHELL.pwd_prompt()}>$ ')
-        if command != "exit" or command != "quit":
-            d_run:dict[Any, Any]    = system.job_run(f"cfs {command}")
-        else:
+        if 'quit' in command.lower() or 'exit' in command.lower():
             sys.exit(0)
+        else:
+            d_run:dict[Any, Any]    = system.job_run(f"cfs {command}")
 

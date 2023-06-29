@@ -7,10 +7,10 @@ from    pathlib     import  Path
 import  pandas      as      pd
 import  pudb
 
-_cp:type        = imp._imp
 _ls:type        = ls._ls
 LS:_ls          = _ls()
-LS.init()
+
+Cp:imp.Imp      = core.Core()
 
 def manifest_resolve(this, path:Path) -> tuple[Path, str]:
     manifestFile:Path       = Path('')
@@ -23,44 +23,71 @@ def source_update(this, src:Path, srcfile:str, destLink:Path, destFile:str):
     manifestSrc:FILE.Manifest   = FILE.Manifest(srcFile)
     df_files:pd.DataFrame       = LS.files_get(src)
 
-def file_vcopy(this, source:Path, target:Path):
+def manifest_refsAdd(path:Path, refmark:str, ref:Path, df_ref:pd.DataFrame=pd.DataFrame()) \
+    -> pd.DataFrame:
+    pathManifest:FILE.Manifest  = FILE.Manifest(FILE.File(path))
+    df_file:pd.DataFrame        = LS.files_get(path)
+    b_manifestUpdate:bool       = False
+    if df_file['refs'].isnull().values.any():
+        df_file['refs']         = f'{refmark}{ref}'
+        b_manifestUpdate        = True
+    elif df_file.empty:
+        df_file                 = df_ref.copy()
+        df_file['name']         = path.name
+        df_file['refs']         = f'{refmark}{ref}'
+        b_manifestUpdate        = True
+    elif not str(ref) in df_file['refs'][df_file.index.tolist()[0]]:
+        df_file['refs']         += f';{refmark}{ref}'
+        b_manifestUpdate        = True
+    if b_manifestUpdate:
+        pathManifest.update_entry(df_file.to_dict(orient='records')[0])
+    return df_file
+
+def file_copy(this, source:Path, target:Path) -> pd.DataFrame:
     pudb.set_trace()
 
     source              = this.path_expand(source)
     target              = this.path_expand(target)
-    sourcePath:Path     = Path('')
-    sourceFile:str      = ""
-    sourcePath, sourceFile  = this.manifest_resolve(Path(source))
+    # sourceManifest:Path = Path('')
+    # sourceFile:str      = ""
+    # sourceManifest, sourceFile  = this.manifest_resolve(Path(source))
 
-    if this.cfs2fs(target.is_dir()):
-        target          = target / Path(sourceFile)
-    destPath:Path       = Path('')
-    destFile:str        = ""
-    destPath, destFile      = this.manifest_resolve(Path(target))
+    if this.cfs2fs(target).is_dir():
+        target          = target / Path(source.name)
+    # destManifest:Path   = Path('')
+    # destFile:str        = ""
+    # destManifest, destFile      = this.manifest_resolve(Path(target))
 
-    sourceManifest:FILE.Manifest    = FILE.Manifest(FILE.File(source))
-    df_source:pd.DataFrame  = LS.files_get(source)
-    b_sourceUpdate:bool     = False
-    if df_source['refs'].isnull().values.any():
-        df_source['refs']   = f'->{target}'
-        b_sourceUpdate      = True
-    elif not str(target) in df_source['refs'][1]:
-        df_source['refs']  += f';{target}'
-        b_sourceUpdate      = True
-    if b_sourceUpdate:
-        sourceManifest.update_entry(df_source.to_dict(orient='records')[0])
+    return manifest_refsAdd(target,'<-', source,
+                            manifest_refsAdd(source, '->', target)
+                            )
 
-    destManifest:FILE.Manifest      = FILE.Manifest(FILE.File(destPath))
-    df_dest:pd.DataFrame    = LS.files_get(target)
-    if df_dest.empty:
-        df_dest             = df_source.copy()
-        df_dest['refs']     = f'<-{source}'
-    destManifest.update_entry(df_dest.to_dict(orient='records')[0])
+    # sourceManifest:FILE.Manifest    = FILE.Manifest(FILE.File(source))
+    # df_source:pd.DataFrame  = LS.files_get(source)
+    # b_sourceUpdate:bool     = False
+    # if df_source['refs'].isnull().values.any():
+    #     df_source['refs']   = f'->{target}'
+    #     b_sourceUpdate      = True
+    # elif not str(target) in df_source['refs'][1]:
+    #     df_source['refs']  += f';->{target}'
+    #     b_sourceUpdate      = True
+    # if b_sourceUpdate:
+    #     sourceManifest.update_entry(df_source.to_dict(orient='records')[0])
+
+    # destManifest:FILE.Manifest      = FILE.Manifest(FILE.File(destPath))
+    # df_dest:pd.DataFrame    = LS.files_get(target)
+    # if df_dest.empty:
+    #     df_dest             = df_source.copy()
+    #     df_dest['refs']     = f'<-{source}'
+    # destManifest.update_entry(df_dest.to_dict(orient='records')[0])
 
 
-_cp.manifest_resolve    = manifest_resolve
-_cp.source_update       = source_update
-_cp.file_vcopy          = file_vcopy
+Cp.manifest_resolve    = manifest_resolve
+Cp.source_update       = source_update
+Cp.file_copy           = file_copy
+
+# Cp:_Cp                  = _Cp()
+Cp.__proto__            = imp.Imp
 
 @click.command(help="""
                                 copy files
@@ -78,10 +105,11 @@ file of the __CHRISOS folder in a given directory.
               help='If set, do a recursive copy')
 def cp(source, target, recursive) -> None:
     pudb.set_trace()
-    CP:_cp          = _cp()
-    CP.init()
+    # Here we define the prototypical inheritance:
+    # CP inherits from an existing IMP object, with
+    # CP specific overwrites of some methods.
 
-    CP.file_vcopy(Path(source), Path(target))
+    Cp.file_copy(Path(source), Path(target))
 
 
 

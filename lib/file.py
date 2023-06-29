@@ -22,15 +22,23 @@ def File(this, cfsfile:Path) -> None:
     this.file:Path              = cfsfile
     this.link:Path              = Path('')
 
-    this.stats                  = this.FS.cfs2fs(Path(this.file)).stat()
+    try:
+        this.stats              = this.FS.cfs2fs(Path(this.file)).stat()
+    except:
+        this.stats              = None
 
     # and the object that will control the manifest
     if this.file.parent.name    == this.FS.core.metaDir:
         this.manifestFile:Path  =   Path(this.file)
     else:
-        this.manifestFile:Path  =   Path(this.file.parent /
-                                    Path(this.FS.core.metaDir) /
-                                    Path(this.FS.meta.fileStatTable))
+        if this.FS.cfs2fs(this.file).is_dir():
+            this.manifestFile:Path  =   Path(this.file /
+                                        Path(this.FS.core.metaDir) /
+                                        Path(this.FS.meta.fileStatTable))
+        else:
+            this.manifestFile:Path  =   Path(this.file.parent /
+                                        Path(this.FS.core.metaDir) /
+                                        Path(this.FS.meta.fileStatTable))
 
 @property
 def name(this) -> str:
@@ -42,7 +50,10 @@ def owner(this) -> str:
 
 @property
 def size(this) -> int:
-    return this.stats.st_size
+    if this.stats:
+        return this.stats.st_size
+    else:
+        return 0
 
 @property
 def ctime(this) -> str:
@@ -61,7 +72,7 @@ def Manifest(this, fileObj:type) -> None:
     this.fileObj:type       = fileObj
     this.manifest:Path      = fileObj.manifestFile
     this.manifestRFS:Path   = this.FS.cfs2fs(this.manifest)
-    this.metaFields         = ['name', 'type', 'owner', 'refs', 'sharedWith', 'size', 'ctime', 'meta']
+    this.metaFields         = ['name', 'refs', 'type', 'owner', 'sharedWith', 'size', 'ctime', 'meta']
 
     # and initialize this manifest!
     manifest_init(this)
@@ -71,7 +82,7 @@ def Manifest(this, fileObj:type) -> None:
 #     return []
 
 def manifest_init(this) -> list:
-    # pudb.set_trace()
+    pudb.set_trace()
     df:pd.DataFrame     = pd.DataFrame(columns = this.metaFields)
     l_ret:list          = []
     if not this.manifestRFS.is_file():
