@@ -5,9 +5,10 @@ from    pathlib     import Path
 from    pfmisc      import Colors
 import  shutil, os
 import  pudb
+from    typing      import Generator
 
 # Instantiate a "core" object called Imp
-Imp:core.Core = core.Core()
+_Imp:core.Core = core.Core
 
 # Define some methods!
 def badpath_errorExit(this, path:str, type:str, fs:str="") -> None:
@@ -62,21 +63,44 @@ def file_copy(this, src:Path, dest:Path) -> Path:
     shutil.copy(src, destReal)
     return destReal
 
-def file_process(this, src:Path, dest:Path) -> bool:
-    pudb.set_trace()
+def file_process(this, src:Path, dest:Path, show:bool) -> bool:
+    # Need to check if import will "overwrite" virtual existing
+    # file
     if src.name != dest.name:
          dest  = dest / src.name
     fileObj:type    = file.File(this.fs2cfs(this.file_copy(src, dest)))
+    if show:
+         print(f"[EXT]{str(src):50} -> [CFS]{dest}")
     manifest:type   = file.Manifest(fileObj)
-    manifest.update_entry()
+    manifest.update_entry({}, "", ['refs'])
 
     return True
 
+def empty_generator():
+     return
+
+def import_do(this, src:Path, dest:Path, show:bool) -> int:
+    count:int  = 0
+    iterator:Generator[Path, None, None] = empty_generator()
+    if "*" in src.name:
+         iterator = src.parent.expanduser().glob(src.name)
+    elif src.is_dir():
+         iterator = src.iterdir()
+    if iterator:
+        for child in iterator:
+            if child.is_file():
+                file_process(this, child, dest, show)
+                count += 1
+    else:
+         file_process(this, src, dest, show)
+    return count
+
 # Attach those methods to our prototype
-Imp.error_exit             = badpath_errorExit
-Imp.destination_resolve    = destination_resolve
-Imp.file_copy              = file_copy
-Imp.file_process           = file_process
+_Imp.error_exit             = badpath_errorExit
+_Imp.destination_resolve    = destination_resolve
+_Imp.file_copy              = file_copy
+_Imp.file_process           = file_process
+_Imp.import_do              = import_do
 
 
 @click.command(help="""
@@ -95,12 +119,15 @@ which the file is uploaded.
 @click.option('--recursive',
               is_flag = True,
               help    = 'If set, do a recursive copy')
-def imp(sourcefile, targetfile, recursive) -> bool:
-    pudb.set_trace()
-    src:Path        = Path(sourcefile)
-    dest:Path       = Imp.destination_resolve(Path(targetfile))
-    fileOK:bool     = Imp.file_process(src, dest) if src.is_file() else False
-    return fileOK
+@click.option('--show',
+              is_flag = True,
+              help    = 'If set, print the files as they are imported')
+def imp(sourcefile, targetfile, recursive, show) -> int:
+    Imp:_Imp            = _Imp()
+    src:Path            = Path(sourcefile)
+    dest:Path           = Imp.destination_resolve(Path(targetfile))
+    filesImported:int   = Imp.import_do(src, dest, show)
+    return filesImported
 
     # if recursive:
     #     print(f'Performing a recursive copy...')

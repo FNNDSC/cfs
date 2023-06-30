@@ -2,6 +2,7 @@ import  click
 from    prototype   import  *
 from    lib         import  core
 from    pathlib     import  Path
+import  sys
 
 _cd:type        = core.Core
 
@@ -29,6 +30,10 @@ def cd(directory:str, echo, echoreal) -> None:
     dir         = CD.path_expand(dir)
     if CD.dir_checkExists(Path(dir)):
         CD.cwdWrite(dir)
+    else:
+        print(f"directory '{directory}' not found.")
+        sys.exit(1)
     if echo or echoreal:
         print(CD.pwd_prompt(realDir = echoreal))
+    sys.exit(0)
 

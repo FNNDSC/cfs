@@ -27,6 +27,12 @@ def metaDirRoot_checkAndCreate(this) -> bool:
     if not this.croot_check():
         return False
     this.metaRoot.mkdir(parents = True, exist_ok = True)
+    fstat:Path  = (this.metaRoot / Path(this.meta.fileStatTable))
+    meta:Path   = (this.metaRoot / Path(this.meta.fileMetaTable))
+    if not fstat.is_file():
+        fstat.touch()
+    if not meta.is_file():
+        meta.touch()
     return True
 
 def cwdRead(this) -> Path:

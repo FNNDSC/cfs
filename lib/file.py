@@ -6,7 +6,7 @@ import  pudb
 from    lib         import  core
 from    pfmisc      import  Colors
 import  os, sys
-from    typing      import  Literal, LiteralString, Any
+from    typing      import  Literal, LiteralString, Any, Union
 import  csv
 import  pandas      as      pd
 import  datetime
@@ -39,6 +39,7 @@ def File(this, cfsfile:Path) -> None:
             this.manifestFile:Path  =   Path(this.file.parent /
                                         Path(this.FS.core.metaDir) /
                                         Path(this.FS.meta.fileStatTable))
+    this.manifest                   = Manifest(this)
 
 @property
 def name(this) -> str:
@@ -56,6 +57,13 @@ def size(this) -> int:
         return 0
 
 @property
+def refs(this) -> str:
+    df_files:pd.DataFrame   = pd.read_csv(str(this.manifest.manifestRFS))
+    df_refs:pd.DataFrame    = df_files[df_files['name'] == this.file.name]
+    refs:str                = df_refs['refs'][df_refs.index.tolist()[0]]
+    return refs
+
+@property
 def ctime(this) -> str:
     return datetime.datetime.fromtimestamp(this.stats.st_mtime).strftime('%Y-%m-%d %H:%M')
     # return this.stats.st_mtime
@@ -64,6 +72,7 @@ File.name                   = name
 File.size                   = size
 File.ctime                  = ctime
 File.owner                  = owner
+File.refs                   = refs
 
 @constructor # Manifest ---------------------------------------
 def Manifest(this, fileObj:type) -> None:
@@ -72,7 +81,7 @@ def Manifest(this, fileObj:type) -> None:
     this.fileObj:type       = fileObj
     this.manifest:Path      = fileObj.manifestFile
     this.manifestRFS:Path   = this.FS.cfs2fs(this.manifest)
-    this.metaFields         = ['name', 'refs', 'type', 'owner', 'sharedWith', 'size', 'ctime', 'meta']
+    this.metaFields         = ['type', 'name', 'refs', 'owner', 'sharedWith', 'size', 'ctime', 'meta']
 
     # and initialize this manifest!
     manifest_init(this)
@@ -82,7 +91,6 @@ def Manifest(this, fileObj:type) -> None:
 #     return []
 
 def manifest_init(this) -> list:
-    pudb.set_trace()
     df:pd.DataFrame     = pd.DataFrame(columns = this.metaFields)
     l_ret:list          = []
     if not this.manifestRFS.is_file():
@@ -91,7 +99,9 @@ def manifest_init(this) -> list:
         return l_ret
     try:
         l_ret = this.metaFields
-        df.loc[len(df)] = manifest_create(this, 'dir')
+        df.loc[len(df)] = metaData_set( this.metaFields,
+                                        manifest_create(this, 'dir'),
+                                        name = '.')
         df.to_csv(str(this.manifestRFS), index = False, )
     except:
         pass
@@ -103,33 +113,38 @@ def list_to_string(list_value) -> str:
 def string_to_list(string) -> list:
     return string.split(',')
 
-def manifest_create(this, type:str = 'file') -> dict[str, Any]:
-    if type == 'file':
-        d_metaData:dict[str, Any]   = {
-            'name'      : this.fileObj.name,
-            'type'      : 'file',
-            'owner'     : this.fileObj.owner,
-            'refs'      : '',
-            'sharedWith': '',
-            'size'      : this.fileObj.size,
-            'ctime'     : this.fileObj.ctime,
-            'meta'      : this.FS.meta.fileMetaTable
-        }
-    else:
-        fileStat:type   = File(this.manifest)
-        d_metaData:dict[str, Any]   = {
-            'name'      : '.',
-            'type'      : 'dir',
-            'owner'     : fileStat.owner,
-            'refs'      : '',
-            'sharedWith': '',
-            'size'      : 0,
-            'ctime'     : fileStat.ctime,
-            'meta'      : this.FS.meta.fileMetaTable
-        }
+def metaData_set(l_keys:list, d_metaData:dict[str, Any], **kwargs) -> dict[str, Any]:
+    """
+    Any key in d_metaData (for key in l_keys) that is passed as in
+    kwargs has its value changed to the kwargs value
+
+    Args:
+        l_keys (list): list of keys in dictionary to consider
+        d_metaData (dict[str, Any]): the dictionary to update
+
+    Returns:
+        dict[str, Any]: updated dictionary
+    """
+    d_metaData  = {**d_metaData, **{key:kwargs[key] for key in l_keys if key in kwargs}}
     return d_metaData
 
-def manifest_updateEntry(this, d_fileInfo:dict[str, Any] = dict(), name:str="") -> dict[str, Any]:
+def manifest_create(this, type:str = 'file') -> dict[str, Any]:
+    d_metaData:dict[str, Any]   = {
+        'name'      : this.fileObj.name,
+        'type'      : type,
+        'owner'     : this.fileObj.owner,
+        'refs'      : '',
+        'sharedWith': '',
+        'size'      : this.fileObj.size,
+        'ctime'     : this.fileObj.ctime,
+        'meta'      : this.FS.meta.fileMetaTable
+    }
+    return d_metaData
+
+def manifest_updateEntry(this,
+                         d_fileInfo:dict[str, Any]  = dict(),
+                         name:str                   = "",
+                         l_skip:list                = []) -> dict[str, Any]:
     # pudb.set_trace()
     df:pd.DataFrame             = pd.read_csv(str(this.manifestRFS))
     search:str                  = name
@@ -142,10 +157,11 @@ def manifest_updateEntry(this, d_fileInfo:dict[str, Any] = dict(), name:str="") 
         d_fileInfo              = manifest_create(this)
     if len(index) > 0:
         for key in this.metaFields:
-            df.loc[index, key]  = d_fileInfo[key]
+            if key not in l_skip:
+                df.loc[index, key]  = d_fileInfo[key]
     else:
         df.loc[len(df)]         = d_fileInfo
-    df.to_csv(str(this.manifestRFS), index = False)
+    df.sort_values(['type', 'name']).to_csv(str(this.manifestRFS), index = False)
     return d_fileInfo
 
 # Manifest.sharedWith     = sharedWith
