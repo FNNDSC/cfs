@@ -12,19 +12,6 @@ LS:_ls          = _ls()
 
 _Cp:imp._Imp    = imp._Imp
 
-def manifest_resolve(this, path:Path) -> tuple[Path, str]:
-    manifestFile:Path       = Path('')
-    file:str                = ""
-    manifestFile, file      = this.manifest_get(path)
-    return Path(manifestFile), file
-
-def source_update(this, src:Path):
-    pudb.set_trace()
-    srcFile:type                = FILE.File(src)
-    print(srcFile.refs)
-    manifestSrc:FILE.Manifest   = FILE.Manifest(srcFile)
-    df_files:pd.DataFrame       = LS.files_get(src)
-
 def manifest_refsAdd(path:Path, refmark:str, ref:Path, df_ref:pd.DataFrame=pd.DataFrame()) \
     -> pd.DataFrame:
     pathManifest:FILE.Manifest  = FILE.Manifest(FILE.File(path))
@@ -46,22 +33,23 @@ def manifest_refsAdd(path:Path, refmark:str, ref:Path, df_ref:pd.DataFrame=pd.Da
     return df_file
 
 def file_copy(this, source:Path, target:Path) -> pd.DataFrame:
-    pudb.set_trace()
-
+    # pudb.set_trace()
     source              = this.path_expand(source)
     target              = this.path_expand(target)
     sourceRefs:str      = FILE.File(source).refs
     if sourceRefs:
-        source          = Path(str(sourceRefs).split('<-')[1])
-    # source_update(this, source)
+        try:
+            source      = Path(str(sourceRefs).split('<-')[1])
+        except:
+            pass
     if this.cfs2fs(target).is_dir():
         target          = target / Path(source.name)
     return manifest_refsAdd(target,'<-', source,
                             manifest_refsAdd(source, '->', target)
                             )
 
-_Cp.manifest_resolve    = manifest_resolve
-_Cp.source_update       = source_update
+# _Cp.manifest_resolve    = manifest_resolve
+# _Cp.source_update       = source_update
 
 @click.command(help="""
                                 copy files
@@ -78,7 +66,7 @@ file of the __CHRISOS folder in a given directory.
               is_flag=True,
               help='If set, do a recursive copy')
 def cp(source, target, recursive) -> None:
-    pudb.set_trace()
+    # pudb.set_trace()
     # Here we define the prototypical inheritance:
     # We create an instance of Cp that is essentially a
     # "clone" of the "imp"ort copy. Once instantiated,

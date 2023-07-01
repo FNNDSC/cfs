@@ -10,7 +10,7 @@ from    typing      import  Generator
 import  pandas      as      pd
 
 # Instantiate a "core" object called Imp
-_Imp:core.Core = core.Core
+_Exp:core.Core = core.Core
 
 LS:ls._ls    = ls._ls()
 
@@ -75,8 +75,6 @@ def file_process(this, src:Path, dest:Path) -> bool:
     df_dest:pd.DataFrame    = LS.files_get(dest)
     if not df_dest.empty:
          print(f"{dest} exists... skipping.")
-         return False
-
     fileObj:type    = file.File(this.fs2cfs(this.file_copy(src, dest)))
     manifest:type   = file.Manifest(fileObj)
     manifest.update_entry({}, "", ['refs'])
@@ -102,22 +100,18 @@ def import_do(this, src:Path, dest:Path, show:bool) -> int:
     return count
 
 # Attach those methods to our prototype
-_Imp.error_exit             = badpath_errorExit
-_Imp.destination_resolve    = destination_resolve
-_Imp.file_copy              = file_copy
-_Imp.file_process           = file_process
-_Imp.import_do              = import_do
+_Exp.error_exit             = badpath_errorExit
+_Exp.destination_resolve    = destination_resolve
+_Exp.file_copy              = file_copy
+_Exp.file_process           = file_process
+_Exp.import_do              = import_do
 
 
 @click.command(help="""
-                                import files
+                                export files
 
-This command simulates the "import"/creation of actual new files / data
-in the ChRIS File System. The <sourcefile> is a "real file system" file
-and the <targetfile> is a ChRIS File System file.
-
-This method updates the file meta information in the target directory to
-which the file is uploaded.
+This command simulates the "export" of files from the ChRIS File System
+to a "real" file system.
 
 """)
 @click.argument('sourcefile', required = True)
@@ -128,7 +122,7 @@ which the file is uploaded.
 @click.option('--show',
               is_flag = True,
               help    = 'If set, print the files as they are imported')
-def imp(sourcefile, targetfile, recursive, show) -> int:
+def exp(sourcefile, targetfile, recursive, show) -> int:
     # pudb.set_trace()
     Imp:_Imp            = _Imp()
     src:Path            = Path(sourcefile)

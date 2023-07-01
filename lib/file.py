@@ -60,7 +60,12 @@ def size(this) -> int:
 def refs(this) -> str:
     df_files:pd.DataFrame   = pd.read_csv(str(this.manifest.manifestRFS))
     df_refs:pd.DataFrame    = df_files[df_files['name'] == this.file.name]
-    refs:str                = df_refs['refs'][df_refs.index.tolist()[0]]
+    refs:str                = ''
+    try:
+        refs                = str(df_refs['refs'][df_refs.index.tolist()[0]])
+    except:
+        refs                = ''
+    if refs == 'nan': refs  = ''
     return refs
 
 @property
@@ -146,25 +151,33 @@ def manifest_updateEntry(this,
                          name:str                   = "",
                          l_skip:list                = []) -> dict[str, Any]:
     # pudb.set_trace()
-    df:pd.DataFrame             = pd.read_csv(str(this.manifestRFS))
-    search:str                  = name
+    df:pd.DataFrame     = pd.read_csv(str(this.manifestRFS))
+    search:str          = name
     if not name:
-        search                  = this.fileObj.name
+        search          = this.fileObj.name
 
-    index:pd.Index              = df.index[df['name'] == search]
+    index:pd.Index      = df.index[df['name'] == search]
 
     if not d_fileInfo:
-        d_fileInfo              = manifest_create(this)
+        d_fileInfo      = manifest_create(this)
     if len(index) > 0:
         for key in this.metaFields:
             if key not in l_skip:
-                df.loc[index, key]  = d_fileInfo[key]
+                if key in d_fileInfo:
+                    df.loc[index, key]  = d_fileInfo[key]
     else:
-        df.loc[len(df)]         = d_fileInfo
+        df.loc[len(df)] = d_fileInfo
     df.sort_values(['type', 'name']).to_csv(str(this.manifestRFS), index = False)
     return d_fileInfo
+
+def manifest_removeEntry(this, key:str, target:Any) -> pd.DataFrame:
+    df:pd.DataFrame     = pd.read_csv(str(this.manifestRFS))
+    df                  = df[df[key] != target]
+    df.sort_values(['type', 'name']).to_csv(str(this.manifestRFS), index = False)
+    return df
 
 # Manifest.sharedWith     = sharedWith
 Manifest.init           = manifest_init
 Manifest.update_entry   = manifest_updateEntry
 Manifest.create         = manifest_create
+Manifest.remove_entry   = manifest_removeEntry

@@ -4,17 +4,17 @@ import  pudb
 
 import  click
 
-from commands import (cp, cd, pwd, ls, mkdir, imp, shell)
+from commands import (cp, cd, pwd, ls, mkdir, imp, exp, rm, shell)
 
 
 @click.group(help="""
                             ChRIS-File-System -- cfs
 
 A workable demonstration/proof-of-concept of a File-System
-"implementation" on the ChRIS backend. The core idea is to
-present the model of files / directories to clients, but to
-implement meta-based operations on the actual physical
-storage medium *within* ChRIS.
+"implementation" on the ChRIS backend. In this experiment, CUBE
+is imagined to organize its internal data-verse pervasively using
+conventional file system concepts, i.e. files organized in nested
+directories.
 """)
 @click.pass_context
 def cfs(ctx) -> None:
@@ -26,6 +26,8 @@ cfs.add_command(pwd.pwd)
 cfs.add_command(ls.ls)
 cfs.add_command(mkdir.mkdir)
 cfs.add_command(imp.imp)
+cfs.add_command(exp.exp)
+cfs.add_command(rm.rm)
 cfs.add_command(shell.shell)
 
 if __name__ == '__main__':

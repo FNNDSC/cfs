@@ -15,7 +15,7 @@ def files_get(this, path:Path, attribs:str = "") -> pd.DataFrame:
     file:str                = ""
     manifestFile, file      = this.manifest_get(path)
     try:
-        df_files            = pd.read_csv(str(this.cfs2fs(manifestFile)))[1:]
+        df_files            = pd.read_csv(str(this.cfs2fs(manifestFile)))
     except:
         pass
     if file:
@@ -26,6 +26,8 @@ def files_get(this, path:Path, attribs:str = "") -> pd.DataFrame:
     return df_files
 
 def files_print(this, df_files:pd.DataFrame, long:bool) -> bool:
+    if df_files.empty:
+        return False
     df_sorted:pd.DataFrame = df_files.sort_values(['type', 'name'])
     if not len(df_files):
         return False
