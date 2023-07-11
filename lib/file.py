@@ -12,18 +12,26 @@ import  pandas      as      pd
 import  datetime
 
 @constructor # File ---------------------------------------
-def File(this, cfsfile:Path) -> None:
+def File(this, cfsfile:Path, onObjStorage:bool = False) -> None:
     # Type annotations are not supported on "this"
     # add the core for some helper functions
     this.FS:type                = core.Core()
 
-
-    cfsfile                     = this.FS.path_expand(cfsfile)
+    if onObjStorage:
+        cfsfile                 = cfsfile
+    else:
+        cfsfile                 = this.FS.path_expand(cfsfile)
     this.file:Path              = cfsfile
     this.link:Path              = Path('')
 
+    this.realFSfunc             = None
+    if onObjStorage:
+        this.realFSfunc         = this.FS.cfs2ofs
+    else:
+        this.realFSfunc         = this.FS.cfs2fs
+
     try:
-        this.stats              = this.FS.cfs2fs(Path(this.file)).stat()
+        this.stats              = this.realFSfunc(Path(this.file)).stat()
     except:
         this.stats              = None
 
@@ -31,7 +39,7 @@ def File(this, cfsfile:Path) -> None:
     if this.file.parent.name    == this.FS.core.metaDir:
         this.manifestFile:Path  =   Path(this.file)
     else:
-        if this.FS.cfs2fs(this.file).is_dir():
+        if this.realFSfunc(this.file).is_dir():
             this.manifestFile:Path  =   Path(this.file /
                                         Path(this.FS.core.metaDir) /
                                         Path(this.FS.meta.fileStatTable))
@@ -73,6 +81,13 @@ def ctime(this) -> str:
     return datetime.datetime.fromtimestamp(this.stats.st_mtime).strftime('%Y-%m-%d %H:%M')
     # return this.stats.st_mtime
 
+def sourcePartition_resolve(source) -> tuple[Path, bool]:
+    accessObjectStorage:bool    = False
+    if 'obj:' in str(source):
+        source                  = Path(str(source).replace('obj:', ''))
+        accessObjectStorage     = True
+    return source, accessObjectStorage
+
 File.name                   = name
 File.size                   = size
 File.ctime                  = ctime
@@ -85,7 +100,7 @@ def Manifest(this, fileObj:type) -> None:
     this.FS:type            = core.Core()
     this.fileObj:type       = fileObj
     this.manifest:Path      = fileObj.manifestFile
-    this.manifestRFS:Path   = this.FS.cfs2fs(this.manifest)
+    this.manifestRFS:Path   = this.fileObj.realFSfunc(this.manifest)
     this.metaFields         = ['type', 'name', 'refs', 'owner', 'sharedWith', 'size', 'ctime', 'meta']
 
     # and initialize this manifest!
