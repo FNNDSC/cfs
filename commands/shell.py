@@ -18,15 +18,13 @@ An extremely "simple" CFS "shell". Run CFS commands from a shell-esque interface
 that harkens back to the days of /bin/ash!
 
 """)
-@click.argument('directory', required = False)
 @click.option('--prompt',
               is_flag=True,
               help='If set, print the CFS cwd as prompt')
 @click.option('--promptReal',
               is_flag=True,
               help='If set, also print the "real" directory in the prompt')
-def shell(directory:str, prompt, promptreal) -> None:
-    # pudb.set_trace()
+def shell(prompt, promptreal) -> None:
     SHELL:_shell  = _shell()
     SHELL.init()
     system  = jobber.Jobber({'verbosity': 1, 'noJobLogging': True})
