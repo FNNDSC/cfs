@@ -124,8 +124,8 @@ to a "real" file system.
               help    = 'If set, print the files as they are imported')
 def exp(sourcefile, targetfile, recursive, show) -> int:
     # pudb.set_trace()
-    Imp:_Imp            = _Imp()
+    Exp:_Exp            = _Exp()
     src:Path            = Path(sourcefile)
-    dest:Path           = Imp.destination_resolve(Path(targetfile))
-    filesImported:int   = Imp.import_do(src, dest, show)
+    dest:Path           = Exp.destination_resolve(Path(targetfile))
+    filesImported:int   = Exp.import_do(src, dest, show)
     return filesImported
