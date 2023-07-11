@@ -4,7 +4,9 @@ import  pudb
 
 import  click
 
-from commands import (cp, cd, pwd, ls, mkdir, imp, exp, rm, shell)
+from commands import (
+    cp, cd, pwd, ls, mkdir, imp, rm, shell, tree, find
+)
 
 
 @click.group(help="""
@@ -26,9 +28,11 @@ cfs.add_command(pwd.pwd)
 cfs.add_command(ls.ls)
 cfs.add_command(mkdir.mkdir)
 cfs.add_command(imp.imp)
-cfs.add_command(exp.exp)
+cfs.add_command(find.find)
 cfs.add_command(rm.rm)
 cfs.add_command(shell.shell)
+cfs.add_command(tree.tree)
+
 
 if __name__ == '__main__':
     cfs()
