@@ -2,38 +2,51 @@ from    prototype   import *
 from    config      import settings
 from    pathlib     import Path
 import  pudb
-
+from    typing      import Callable
 from    pfmisc      import Colors
 import  sys
 
 @constructor
 def Core(this) -> None:
-    # Type annotations are not supported on "this"
-    this.core      = settings.coreio
-    this.meta      = settings.meta
-    this.realRoot  = Path(this.core.realRoot)
-    this.metaRoot  = Path(this.core.realRoot) / Path(this.core.metaDir)
-    this.cwdRec    = this.metaRoot / this.meta.cwd
+    # Type annotations are fully not supported on "this"
+    this.core           = settings.coreio
+    this.meta           = settings.meta
+    this.dbRoot:Path    = Path(this.core.realRoot) / Path(this.core.dbPrefix)
+    this.objRoot:Path   = Path(this.core.realRoot) / Path(this.core.objPrefix)
+    this.dbMeta:Path    = this.dbRoot / Path(this.core.metaDir)
+    this.objMeta:Path   = this.objRoot / Path(this.core.metaDir)
+    this.cwdRec:Path    = this.dbMeta / this.meta.cwd
 
-def croot_check(this) -> bool:
-    # pudb.set_trace()
-    crootDir:Path   = Path(this.core.realRoot)
-    exists:bool     = False
-    exists          = crootDir.is_dir()
-    return exists
-
-def metaDirRoot_checkAndCreate(this) -> bool:
-    # pudb.set_trace()
-    if not this.croot_check():
-        return False
-    this.metaRoot.mkdir(parents = True, exist_ok = True)
-    fstat:Path  = (this.metaRoot / Path(this.meta.fileStatTable))
-    meta:Path   = (this.metaRoot / Path(this.meta.fileMetaTable))
+def manifests_touch(this, dir:Path) -> None:
+    fstat:Path  = (dir / Path(this.meta.fileStatTable))
+    meta:Path   = (dir / Path(this.meta.fileMetaTable))
     if not fstat.is_file():
         fstat.touch()
     if not meta.is_file():
         meta.touch()
-    return True
+
+def croot_createIfNotExist(this, dir:Path) -> bool:
+    # pudb.set_trace()
+    if not dir.is_dir():
+        dir.mkdir(parents = True, exist_ok = True)
+        this.manifests_touch(dir)
+        return True
+    return False
+
+def metaRootObjDirs_checkAndCreate(this) -> list[bool]:
+    """
+    Create the db and obj "meta" dirs. These are the "first" meta
+    dirs and they contain the file system manifest tables.
+
+    Args:
+        this (_type_): the core object
+
+    Returns:
+        bool: If already exist
+    """
+    # pudb.set_trace()
+
+    return [croot_createIfNotExist(this, dir) for dir in [this.dbMeta, this.objMeta]]
 
 def cwdRead(this) -> Path:
     # pudb.set_trace()
@@ -46,9 +59,9 @@ def cwdWrite(this, path:Path) -> str:
     this.cwdRec.write_text(str(path))
     return str(path)
 
-def init(this) -> bool:
+def init(this) -> list[bool]:
     # pudb.set_trace()
-    return this.metaDirRoot_checkAndCreate()
+    return this.metaRootObjDirs_checkAndCreate()
 
 def cfs2fs(this, cfs:Path) -> Path:
     """
@@ -62,8 +75,38 @@ def cfs2fs(this, cfs:Path) -> Path:
         Path: real FS path
     """
     # pudb.set_trace()
-    FS:Path     = Path(f"{this.core.realRoot}{cfs}")
+    FS:Path     = Path(f"{this.dbRoot}{cfs}")
     return FS
+
+def cfs2ofs(this, cfs:Path) -> Path:
+    """
+    Map a ChRIS cfs location to an object FS localtion
+
+    Args:
+        this (_type_): prototype self
+        cfs (Path): cfs path
+
+    Returns:
+        Path: real FS path
+    """
+    # pudb.set_trace()
+    FS:Path     = Path(f"{this.objRoot}{cfs}")
+    return FS
+
+
+def fs2ofs(this, fs:Path) -> Path:
+    """
+    Map a real FS location to a ChRIS object storage location
+
+    Args:
+        this (_type_): prototype self
+        fs (Path): real file system path
+
+    Returns:
+        Path: cfs path
+    """
+    CFS:Path    = Path(str(fs).replace(this.objRoot, '', 1))
+    return CFS
 
 def fs2cfs(this, fs:Path) -> Path:
     """
@@ -76,7 +119,7 @@ def fs2cfs(this, fs:Path) -> Path:
     Returns:
         Path: cfs path
     """
-    CFS:Path    = Path(str(fs).replace(this.core.realRoot, '', 1))
+    CFS:Path    = Path(str(fs).replace(this.dbRoot, '', 1))
     return CFS
 
 def path_expand(this, path:Path) -> Path:
@@ -107,14 +150,15 @@ def stderr(this, message:str, code:int=1) -> None:
     print(message)
     sys.exit(code)
 
-def manifest_get(this, path:Path) -> tuple[Path, str]:
+def manifest_get(this, path:Path, onobjectStorage:bool) -> tuple[Path, str]:
     path                    = this.path_expand(path)
+    cfs2rfs:Callable        = this.cfs2fs if not onobjectStorage else this.cfs2ofs
     manifestFile:Path       = path / this.core.metaDir / this.meta.fileStatTable
     atRootDir:int           = 0
     file:str                = ''
     # Try and find the manifest file, and don't get trapped!
     # If we are "getting" a file, the manifest is off the parent
-    while not this.cfs2fs(manifestFile).is_file():
+    while not cfs2rfs(manifestFile).is_file():
         file                = path.name
         path                = path.parent
         manifestFile        = path / this.core.metaDir / this.meta.fileStatTable
@@ -126,14 +170,17 @@ def manifest_get(this, path:Path) -> tuple[Path, str]:
     return manifestFile, file
 
 
-Core.croot_check                    = croot_check
-Core.metaDirRoot_checkAndCreate     = metaDirRoot_checkAndCreate
+# Core.croot_check                    = croot_check
+Core.manifests_touch                = manifests_touch
+Core.metaRootObjDirs_checkAndCreate = metaRootObjDirs_checkAndCreate
 Core.init                           = init
 Core.cwdRead                        = cwdRead
 Core.cwd                            = cwdRead
 Core.cwdWrite                       = cwdWrite
 Core.cfs2fs                         = cfs2fs
+Core.cfs2ofs                        = cfs2ofs
 Core.fs2cfs                         = fs2cfs
+Core.fs2ofs                         = fs2ofs
 Core.path_expand                    = path_expand
 Core.dir_checkExists                = dir_checkExists
 Core.pwd_prompt                     = pwd_prompt
