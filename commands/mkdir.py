@@ -30,6 +30,22 @@ def dir_manifestGet(this, path:Path) -> Union[FILE.Manifest, bool]:
     manifest:FILE.Manifest  = FILE.Manifest(FILE.File(statFile))
     return manifest
 
+def subpaths_get(target:Path) -> list[Path]:
+    """
+    Simply return a list of subpaths starting one
+    directory level deep (i.e. skipping '/')
+
+    Args:
+        target (Path): the target path
+
+    Returns:
+        list[Path]: a list of increasingly deep subpaths
+    """
+    subpathlist:list[Path]  = list(target.parents)
+    subpathlist.reverse()
+    subpathlist.append(target)
+    return subpathlist[1:]
+
 _mkdir.manifestsUpdate  = dir_manifestsUpdate
 _mkdir.manifestGet      = dir_manifestGet
 
@@ -43,18 +59,19 @@ directory that contains meta file system information.
 """)
 @click.argument('directory', required = True)
 def mkdir(directory:str) -> None:
-    MKDIR:_mkdir    = _mkdir()
+    # pudb.set_trace()
+    MKDIR:_mkdir            = _mkdir()
     MKDIR.init()
-    target:Path     = MKDIR.path_expand(Path(directory))
+    target:Path             = MKDIR.path_expand(Path(directory))
 
-    # Create the actual directory, and add the meta files/dir
-    realPath:Path   = MKDIR.cfs2fs(target)
-    metaPath:Path   = realPath / MKDIR.core.metaDir
-    realPath.mkdir(parents = True, exist_ok = True)     # Actual dir
-    metaPath.mkdir(parents = True, exist_ok = True)     # Meta dir
-    (metaPath / Path(MKDIR.meta.fileStatTable)).touch() # stat table
-    (metaPath / Path(MKDIR.meta.fileMetaTable)).touch() # meta table
-
-    # And now record this directory in the meta file table of its
-    # parent
-    MKDIR.manifestsUpdate(Path(target))
+    for subpath in subpaths_get(target):
+        # Create the actual directory, and add the meta files/dir
+        realPath:Path   = MKDIR.cfs2fs(subpath)
+        metaPath:Path   = realPath / MKDIR.core.metaDir
+        realPath.mkdir(parents = True, exist_ok = True)     # Actual dir
+        metaPath.mkdir(parents = True, exist_ok = True)     # Meta dir
+        (metaPath / Path(MKDIR.meta.fileStatTable)).touch() # stat table
+        (metaPath / Path(MKDIR.meta.fileMetaTable)).touch() # meta table
+        # And now record this directory in the meta file table of its
+        # parent
+        MKDIR.manifestsUpdate(Path(subpath))
