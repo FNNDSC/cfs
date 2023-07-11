@@ -6,6 +6,8 @@ from    pathlib     import Path
 class CoreIO(BaseSettings):
     metaDir:str             = '__CHRISOS'
     realRoot:str            = '/'
+    objPrefix:str           = 'objectStorage'
+    dbPrefix:str            = 'db'
     homeDir:str             = '/home/rudolph'
 
 class Meta(BaseSettings):
