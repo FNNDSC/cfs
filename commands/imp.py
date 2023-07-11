@@ -3,11 +3,12 @@ from    prototype   import  *
 from    lib         import  core, file
 from    pathlib     import  Path
 from    pfmisc      import  Colors
-from    commands    import  ls
+from    commands    import  ls, cp
 import  shutil, os
 import  pudb
 from    typing      import  Generator
 import  pandas      as      pd
+import  uuid
 
 # Instantiate a "core" object called Imp
 _Imp:core.Core = core.Core
@@ -48,10 +49,15 @@ def destination_resolve(this, path:Path) -> Path:
                this.error_exit(str(path.parent), "ChRIS dir", "cfs")
     return path
 
-def file_copy(this, src:Path, dest:Path) -> Path:
+def file_import(this, src:Path, dest:Path) -> Path:
     """
-    Copy a single file from <src> to <dest>, returning
-    <dest> or empty path on fail
+    Copy a single file from (external/real) <src> to
+    object storage. Name the file with a UUID prefix
+    in storage.
+
+    In the "root" of the db use a "file tracking" table
+    to associate the storage object with a location <dest>
+    in the directory-first db.
 
     Args:
         this (_type_): prototype self
@@ -59,13 +65,24 @@ def file_copy(this, src:Path, dest:Path) -> Path:
         dest (path): destination path (file) [cfs FS]
 
     Returns:
-        Path: destination path (file) or empty path on fail
+        Path: real import path
     """
     if not src.is_file():
          this.error_exit(str(src), "source file", "real")
-    destReal:Path           = this.cfs2fs(dest)
-    shutil.copy(src, destReal)
-    return destReal
+
+    # Copy into objectStore
+    objectStoreFile:Path    = Path(f'{uuid.uuid1()}-{str(src.name)}')
+    shutil.copy(src, this.objRoot / objectStoreFile)
+
+    objectStoreFile         = Path('/') / objectStoreFile
+
+    # Now create an entry for this file in the object store
+    # manifest
+    # pudb.set_trace()
+    useObjectStoragePartition:bool = True
+    file.File(objectStoreFile, useObjectStoragePartition).manifest.update_entry({}, "", ['refs'])
+
+    return objectStoreFile
 
 def file_process(this, src:Path, dest:Path) -> bool:
     # Need to check if import will "overwrite" virtual existing
@@ -73,13 +90,16 @@ def file_process(this, src:Path, dest:Path) -> bool:
     if src.name != dest.name:
          dest  = dest / src.name
     df_dest:pd.DataFrame    = LS.files_get(dest)
+
     if not df_dest.empty:
          print(f"{dest} exists... skipping.")
          return False
 
-    fileObj:type    = file.File(this.fs2cfs(this.file_copy(src, dest)))
-    manifest:type   = file.Manifest(fileObj)
-    manifest.update_entry({}, "", ['refs'])
+    # Now do a reference (aka "hard link") from the object storage to the
+    # db manifest in the destination directory / key-table.
+    fromObjectStorage:bool  = True
+    CP:cp._Cp = cp._Cp()
+    CP.copy(file_import(this, src, dest), dest, fromObjectStorage)
 
     return True
 
@@ -104,7 +124,7 @@ def import_do(this, src:Path, dest:Path, show:bool) -> int:
 # Attach those methods to our prototype
 _Imp.error_exit             = badpath_errorExit
 _Imp.destination_resolve    = destination_resolve
-_Imp.file_copy              = file_copy
+_Imp.file_import            = file_import
 _Imp.file_process           = file_process
 _Imp.import_do              = import_do
 
