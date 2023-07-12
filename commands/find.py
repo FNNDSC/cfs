@@ -143,7 +143,9 @@ def source_resolve(src:Path) -> Path:
 def dirlist_resolve(this, d_run:dict[Any, Any]) -> list[Path]:
     dirlist:list[Path]      = d_run['stdout'].split('\n')
     realroot:str            = str(this.dbRoot)
-    dirlist                 = [(str(d).replace(realroot, '')).replace(str(Path(this.core.metaDir) / Path(this.meta.fileStatTable)), '')[:-1] for d in dirlist[:-1]]
+    dirlist                 = [(str(d).replace(realroot, '')).replace(str(Path(this.core.metaDir) / Path(this.meta.fileStatTable)), '') for d in dirlist[:-1]]
+    dirlist                 = [d[:-1] if d.endswith('/') else d for d in dirlist]
+    dirlist                 = [Path(d) for d in dirlist]
     return dirlist
 
 def do(this, search:str, saveto:str, show:bool, onobjectstorage:bool) -> int:
@@ -160,17 +162,6 @@ def do(this, search:str, saveto:str, show:bool, onobjectstorage:bool) -> int:
         source:str          = f"{dir}/*{search}"
         command             = f"cfs cp {source} {savedir}"
         print(command)
-        # system.job_run(f"cfs cp {source} {savedir}")
-
-
-    # iterator:Generator[pd.Series, Any, None]   = df_generator(LS.files_get(src))
-    # src                     = source_resolve(src)
-    # for child in iterator:
-    #     childFile:Path      = src / Path(child['name'])
-    #     if show:
-    #         print(f"[rm]{str(src):50}")
-    #     file_process(this, childFile, onobjectstorage)
-    #     count += 1
     return count
 
 # Attach those methods to our prototype
