@@ -129,22 +129,28 @@ def wildcards_check(path:Path) -> tuple[Path, str]:
         path        = path.parent
     return path, wildcard
 
-def source_resolve(src:Path) -> Path:
+def source_resolve(this, src:Path) -> Path:
     wildcard:str            = ""
     base:Path               = Path('')
     base, wildcard          = wildcards_check(src)
     if wildcard:
         src                 = base
     else:
-        src                 = base.parent
+        if this.cfs2fs(base).is_dir():
+            src             = base
+        else:
+            src             = base.parent
     return src
 
 def delete_do(this, src:Path, show:bool, onobjectstorage:bool) -> int:
+    pudb.set_trace()
     count:int  = 0
     iterator:Generator[pd.Series, Any, None]   = df_generator(LS.files_get(src))
-    src                     = source_resolve(src)
+    src                     = source_resolve(this, src)
     for child in iterator:
         childFile:Path      = src / Path(child['name'])
+        if this.cfs2fs(childFile).is_dir():
+            continue
         if show:
             print(f"[rm]{str(src):50}")
         file_process(this, childFile, onobjectstorage)
@@ -152,8 +158,8 @@ def delete_do(this, src:Path, show:bool, onobjectstorage:bool) -> int:
     return count
 
 # Attach those methods to our prototype
-_Rm.delete_do              = delete_do
-
+_Rm.delete_do               = delete_do
+_Rm.source_resolve          = source_resolve
 
 @click.command(help="""
                                 delete files
@@ -170,11 +176,14 @@ of real data deletion, all linked files are also removed.
 @click.option('--recursive',
               is_flag = True,
               help    = 'If set, do a recursive delete [not implemented]')
+@click.option('--directory',
+              is_flag = True,
+              help    = 'If set, and if the target is a directory, delete the directory')
 @click.option('--show',
               is_flag = True,
               help    = 'If set, print the files as they are deleted')
 def rm(source, show, onobjectstorage, recursive) -> int:
-    # c()
+    pudb.set_trace()
     Rm:_Rm              = _Rm()
     src:Path            = Path(source)
     filesDeleted:int    = Rm.delete_do(src, show, onobjectstorage)
