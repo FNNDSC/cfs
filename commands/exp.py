@@ -9,20 +9,10 @@ import  pudb
 from    typing      import  Generator
 import  pandas      as      pd
 
-# Instantiate a "core" object called Imp
-_Exp:core.Core = core.Core
-
-LS:ls._ls    = ls._ls()
-
-# Define some methods!
-def badpath_errorExit(this, path:str, type:str, fs:str="") -> None:
-        message:str =                                                           \
-            Colors.LIGHT_RED + f"\n\n\t\t\tDanger, Will Robinson!\n\n" +        \
-            Colors.NO_COLOUR + f"The {type}\n\n\t " +                           \
-            Colors.YELLOW    + path +                                           \
-            Colors.NO_COLOUR + f"\n\nwas not found on the {fs} filesystem.\n" + \
-                               f"Please make sure the {type} really exists."
-        this.stderr(message, 2)
+@constructor
+def Exp(this) -> None:
+    this.recursive:bool     = None
+    this.show:bool          = None
 
 def destination_resolve(this, path:Path) -> Path:
     """
@@ -48,7 +38,7 @@ def destination_resolve(this, path:Path) -> Path:
                this.error_exit(str(path.parent), "ChRIS dir", "cfs")
     return path
 
-def file_copy(this, src:Path, dest:Path) -> Path:
+def file_pull(this, src:Path, dest:Path) -> Path:
     """
     Copy a single file from <src> to <dest>, returning
     <dest> or empty path on fail
@@ -84,7 +74,7 @@ def file_process(this, src:Path, dest:Path) -> bool:
 def singleElement_generator(path:Path) -> Generator[Path, None, None]:
      yield path
 
-def import_do(this, src:Path, dest:Path, show:bool) -> int:
+def export_do(this, src:Path, dest:Path, show:bool) -> int:
     count:int  = 0
     iterator:Generator[Path, None, None] = singleElement_generator(src)
     if "*" in src.name:
@@ -100,12 +90,13 @@ def import_do(this, src:Path, dest:Path, show:bool) -> int:
     return count
 
 # Attach those methods to our prototype
-_Exp.error_exit             = badpath_errorExit
-_Exp.destination_resolve    = destination_resolve
-_Exp.file_copy              = file_copy
-_Exp.file_process           = file_process
-_Exp.import_do              = import_do
+Exp.destination_resolve     = destination_resolve
+Exp.file_pull               = file_pull
+Exp.file_process            = file_process
+Exp.export_do               = export_do
 
+# exp:Exp                     = Exp()
+# exp.__proto__               = core.Core
 
 @click.command(help="""
                                 export files
@@ -123,9 +114,10 @@ to a "real" file system.
               is_flag = True,
               help    = 'If set, print the files as they are imported')
 def exp(sourcefile, targetfile, recursive, show) -> int:
-    # pudb.set_trace()
-    Exp:_Exp            = _Exp()
+    pudb.set_trace()
+    exp:Exp             = Exp()
+    exp.__proto__       = core.Core
     src:Path            = Path(sourcefile)
-    dest:Path           = Exp.destination_resolve(Path(targetfile))
-    filesImported:int   = Exp.import_do(src, dest, show)
-    return filesImported
+    dest:Path           = exp.destination_resolve(Path(targetfile))
+    filesExported:int   = exp.export_do(src, dest, show)
+    return filesExported

@@ -5,7 +5,7 @@ import  pudb
 import  click
 
 from commands import (
-    cp, cd, pwd, ls, mkdir, imp, rm, shell, tree, find
+    cp, cd, pwd, ls, mkdir, imp, rm, shell, tree, find, exp
 )
 
 
@@ -32,6 +32,7 @@ cfs.add_command(find.find)
 cfs.add_command(rm.rm)
 cfs.add_command(shell.shell)
 cfs.add_command(tree.tree)
+cfs.add_command(exp.exp)
 
 
 if __name__ == '__main__':
